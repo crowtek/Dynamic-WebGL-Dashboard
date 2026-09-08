@@ -1,6 +1,9 @@
 using UnityEngine;
 using UnityEngine.UIElements;
 
+/// <summary>
+/// Updated the UI
+/// </summary>
 public class WeatherDashboardView
 {
     private Label _locationLabel;

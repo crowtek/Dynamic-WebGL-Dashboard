@@ -2,8 +2,15 @@ using System;
 using UnityEngine;
 using UnityEngine.UIElements;
 
+
+/// <summary>
+/// WeatherController is responsible for fetching weather data from the OpenMeteo API and updating the UI accordingly. 
+/// It initializes the weather service, retrieves the current weather, hourly forecast, and daily forecast, and renders this information in the UI.
+/// </summary>
+
 public class WeatherController : MonoBehaviour
 {
+    [Header("UI & Configuration")]
     [SerializeField] private UIDocument _uiDocument;
     [SerializeField] private WeatherIconDB _iconDatabase;
     [SerializeField] private string _locationName = "Hagen, Germany";
@@ -32,14 +39,13 @@ public class WeatherController : MonoBehaviour
     {
         OpenMeteoResponse weather = await _weatherService.GetWeatherAsync(_latitude, _longitude);
 
-        if (weather != null)
-        {
-            RenderDashboard(weather);
-        }
-        else
+        if (weather == null)
         {
             Debug.LogError("[WeatherController] Failed to retrieve weather data.");
+            return;
         }
+
+        RenderDashboard(weather);
     }
 
     private void RenderDashboard(OpenMeteoResponse weather)
@@ -48,46 +54,53 @@ public class WeatherController : MonoBehaviour
 
         if (weather.current != null)
         {
-            bool isDay = DateTime.Now.Hour >= 6 && DateTime.Now.Hour < 21;
-            Sprite icon = _iconDatabase.GetWeatherSprite(weather.current.weather_code, isDay);
-
-            string windDir = GetCardinalDirection(weather.current.wind_direction_10m);
-            string unit = weather.current_units?.wind_speed_10m ?? "km/h";
-            string windText = $"{Mathf.RoundToInt(weather.current.wind_speed_10m)} {unit} {windDir}";
-
-            _view.SetHeroData(
-                $"{Mathf.RoundToInt(weather.current.temperature_2m)}°",
-                icon,
-                $"{weather.current.relative_humidity_2m}%",
-                windText
-            );
+            RenderCurrentWeather(weather.current, weather.current_units?.wind_speed_10m ?? "km/h");
         }
 
         if (weather.daily?.sunrise != null && weather.daily.sunrise.Length > 0)
         {
-            _view.SetSunTimes(FormatIsoTime(weather.daily.sunrise[0]), FormatIsoTime(weather.daily.sunset[0]));
+            _view.SetSunTimes(
+                WeatherFormatter.FormatIsoTime(weather.daily.sunrise[0]),
+                WeatherFormatter.FormatIsoTime(weather.daily.sunset[0])
+            );
         }
 
         RenderHourly(weather.hourly);
         RenderDaily(weather.daily);
     }
 
+    private void RenderCurrentWeather(CurrentData current, string speedUnit)
+    {
+        bool isDay = DateTime.Now.Hour >= 6 && DateTime.Now.Hour < 21;
+        Sprite icon = _iconDatabase.GetWeatherSprite(current.weather_code, isDay);
+
+        string windDir = WeatherFormatter.GetCardinalDirection(current.wind_direction_10m);
+        string windText = $"{Mathf.RoundToInt(current.wind_speed_10m)} {speedUnit} {windDir}";
+
+        _view.SetHeroData(
+            $"{Mathf.RoundToInt(current.temperature_2m)}°",
+            icon,
+            $"{current.relative_humidity_2m}%",
+            windText
+        );
+    }
+
     private void RenderHourly(HourlyData hourly)
     {
         if (hourly?.time == null) return;
 
-        int startIndex = GetCurrentHourIndex(hourly.time);
+        int startIndex = WeatherFormatter.GetCurrentHourIndex(hourly.time);
 
         for (int i = 0; i < 4; i++)
         {
             int dataIndex = startIndex + i;
             if (dataIndex >= hourly.time.Length) break;
 
-            string time = (i == 0) ? "Now" : FormatHourTime(hourly.time[dataIndex]);
+            string time = (i == 0) ? "Now" : WeatherFormatter.FormatHourTime(hourly.time[dataIndex]);
             string rain = $"{hourly.precipitation_probability[dataIndex]}%";
             string temp = $"{Mathf.RoundToInt(hourly.temperature_2m[dataIndex])}°";
 
-            bool isDay = IsHourDaytime(hourly.time[dataIndex]);
+            bool isDay = WeatherFormatter.IsHourDaytime(hourly.time[dataIndex]);
             Sprite icon = _iconDatabase.GetWeatherSprite(hourly.weather_code[dataIndex], isDay);
 
             _view.SetHourlySlot(i, time, rain, temp, icon);
@@ -102,34 +115,11 @@ public class WeatherController : MonoBehaviour
         {
             if (i >= daily.time.Length) break;
 
-            string date = FormatDailyDate(daily.time[i]);
+            string date = WeatherFormatter.FormatDailyDate(daily.time[i]);
             int min = Mathf.RoundToInt(daily.temperature_2m_min[i]);
             int max = Mathf.RoundToInt(daily.temperature_2m_max[i]);
 
             _view.SetDailySlot(i, date, $"{min}°/{max}°");
         }
-    }
-
-    private bool IsHourDaytime(string isoTime) => DateTime.TryParse(isoTime, out DateTime t) && t.Hour >= 6 && t.Hour < 21;
-
-    private int GetCurrentHourIndex(string[] hourlyTimes)
-    {
-        DateTime now = DateTime.Now;
-        for (int i = 0; i < hourlyTimes.Length; i++)
-        {
-            if (DateTime.TryParse(hourlyTimes[i], out DateTime t) && t.Date == now.Date && t.Hour == now.Hour)
-                return i;
-        }
-        return 0;
-    }
-
-    private string FormatIsoTime(string iso) => DateTime.TryParse(iso, out DateTime t) ? t.ToString("hh:mm tt") : iso;
-    private string FormatHourTime(string iso) => DateTime.TryParse(iso, out DateTime t) ? t.ToString("HH:mm") : iso;
-    private string FormatDailyDate(string iso) => DateTime.TryParse(iso, out DateTime t) ? t.ToString("d MMM") : iso;
-
-    private string GetCardinalDirection(float degrees)
-    {
-        string[] dirs = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" };
-        return dirs[Mathf.RoundToInt(degrees / 45f) % 8];
     }
 }
