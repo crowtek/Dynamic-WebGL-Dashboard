@@ -74,13 +74,12 @@ public class WeatherController : MonoBehaviour
         bool isDay = DateTime.Now.Hour >= 6 && DateTime.Now.Hour < 21;
         Sprite icon = _iconDatabase.GetWeatherSprite(current.weather_code, isDay);
 
-        string windDir = WeatherFormatter.GetCardinalDirection(current.wind_direction_10m);
-        string windText = $"{Mathf.RoundToInt(current.wind_speed_10m)} {speedUnit} {windDir}";
+        string windText = $"{Mathf.RoundToInt(current.wind_speed)} {speedUnit}";
 
         _view.SetHeroData(
-            $"{Mathf.RoundToInt(current.temperature_2m)}°",
+            $"{Mathf.RoundToInt(current.temperature)}°",
             icon,
-            $"{current.relative_humidity_2m}%",
+            $"{current.humidity}%",
             windText
         );
     }
@@ -97,8 +96,8 @@ public class WeatherController : MonoBehaviour
             if (dataIndex >= hourly.time.Length) break;
 
             string time = (i == 0) ? "Now" : WeatherFormatter.FormatHourTime(hourly.time[dataIndex]);
-            string rain = $"{hourly.precipitation_probability[dataIndex]}%";
-            string temp = $"{Mathf.RoundToInt(hourly.temperature_2m[dataIndex])}°";
+            string rain = $"{hourly.rain_probability[dataIndex]}%";
+            string temp = $"{Mathf.RoundToInt(hourly.temperature[dataIndex])}°";
 
             bool isDay = WeatherFormatter.IsHourDaytime(hourly.time[dataIndex]);
             Sprite icon = _iconDatabase.GetWeatherSprite(hourly.weather_code[dataIndex], isDay);
@@ -116,8 +115,8 @@ public class WeatherController : MonoBehaviour
             if (i >= daily.time.Length) break;
 
             string date = WeatherFormatter.FormatDailyDate(daily.time[i]);
-            int min = Mathf.RoundToInt(daily.temperature_2m_min[i]);
-            int max = Mathf.RoundToInt(daily.temperature_2m_max[i]);
+            int min = Mathf.RoundToInt(daily.temperature_min[i]);
+            int max = Mathf.RoundToInt(daily.temperature_max[i]);
 
             _view.SetDailySlot(i, date, $"{min}°/{max}°");
         }
