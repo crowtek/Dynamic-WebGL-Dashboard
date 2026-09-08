@@ -13,6 +13,7 @@ public class WeatherController : MonoBehaviour
     [Header("UI & Configuration")]
     [SerializeField] private UIDocument _uiDocument;
     [SerializeField] private WeatherIconDB _iconDatabase;
+    [SerializeField] private WeatherData _weatherData;
     [SerializeField] private string _locationName = "Hagen, Germany";
     [SerializeField] private float _latitude = 51.3671f;
     [SerializeField] private float _longitude = 7.4633f;
@@ -35,6 +36,22 @@ public class WeatherController : MonoBehaviour
         }
     }
 
+    private void OnEnable()
+    {
+        if(_weatherData != null)
+        {
+            _weatherData.OnWeatherChanged += HandleWeatherChanged;
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (_weatherData != null)
+        {
+            _weatherData.OnWeatherChanged -= HandleWeatherChanged;
+        }
+    }
+
     private async Awaitable Start()
     {
         OpenMeteoResponse weather = await _weatherService.GetWeatherAsync(_latitude, _longitude);
@@ -45,7 +62,17 @@ public class WeatherController : MonoBehaviour
             return;
         }
 
-        RenderDashboard(weather);
+        if (_weatherData != null)
+        {
+            _weatherData.Populate(weather);
+        }
+    }
+
+    private void HandleWeatherChanged()
+    {
+        if (_weatherData == null || _weatherData.RawResponse == null) return;
+
+        RenderDashboard(_weatherData.RawResponse);
     }
 
     private void RenderDashboard(OpenMeteoResponse weather)
@@ -74,12 +101,12 @@ public class WeatherController : MonoBehaviour
         bool isDay = DateTime.Now.Hour >= 6 && DateTime.Now.Hour < 21;
         Sprite icon = _iconDatabase.GetWeatherSprite(current.weather_code, isDay);
 
-        string windText = $"{Mathf.RoundToInt(current.wind_speed)} {speedUnit}";
+        string windText = $"{Mathf.RoundToInt(current.wind_speed_10m)} {speedUnit}";
 
         _view.SetHeroData(
-            $"{Mathf.RoundToInt(current.temperature)}°",
+            $"{Mathf.RoundToInt(current.temperature_2m)}°",
             icon,
-            $"{current.humidity}%",
+            $"{current.relative_humidity_2m}%",
             windText
         );
     }
@@ -96,8 +123,8 @@ public class WeatherController : MonoBehaviour
             if (dataIndex >= hourly.time.Length) break;
 
             string time = (i == 0) ? "Now" : WeatherFormatter.FormatHourTime(hourly.time[dataIndex]);
-            string rain = $"{hourly.rain_probability[dataIndex]}%";
-            string temp = $"{Mathf.RoundToInt(hourly.temperature[dataIndex])}°";
+            string rain = $"{hourly.precipitation_probability[dataIndex]}%";
+            string temp = $"{Mathf.RoundToInt(hourly.temperature_2m[dataIndex])}°";
 
             bool isDay = WeatherFormatter.IsHourDaytime(hourly.time[dataIndex]);
             Sprite icon = _iconDatabase.GetWeatherSprite(hourly.weather_code[dataIndex], isDay);
@@ -115,8 +142,8 @@ public class WeatherController : MonoBehaviour
             if (i >= daily.time.Length) break;
 
             string date = WeatherFormatter.FormatDailyDate(daily.time[i]);
-            int min = Mathf.RoundToInt(daily.temperature_min[i]);
-            int max = Mathf.RoundToInt(daily.temperature_max[i]);
+            int min = Mathf.RoundToInt(daily.temperature_2m_min[i]);
+            int max = Mathf.RoundToInt(daily.temperature_2m_max[i]);
 
             _view.SetDailySlot(i, date, $"{min}°/{max}°");
         }

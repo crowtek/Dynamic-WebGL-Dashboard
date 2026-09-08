@@ -27,9 +27,10 @@ public class CurrentUnits
 public class CurrentData
 {
     public string time;
-    public float temperature;
-    public float humidity;
-    public float wind_speed;
+    public float temperature_2m;
+    public float relative_humidity_2m;
+    public float wind_speed_10m;
+    public float wind_direction_10m;
     public int weather_code;
 }
 
@@ -37,8 +38,8 @@ public class CurrentData
 public class HourlyData
 {
     public string[] time;
-    public float[] temperature;
-    public int[] rain_probability;
+    public float[] temperature_2m;
+    public int[] precipitation_probability;
     public float[] visibility;
     public float[] uv_index;
     public int[] weather_code;
@@ -50,8 +51,8 @@ public class DailyData
     public string[] time;
     public string[] sunrise;
     public string[] sunset;
-    public float[] temperature_max;
-    public float[] temperature_min;
+    public float[] temperature_2m_max;
+    public float[] temperature_2m_min;
     public int[] weather_code;
 }
 
