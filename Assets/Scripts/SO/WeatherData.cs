@@ -15,6 +15,7 @@ public class WeatherData : ScriptableObject
     [Header("Environment State Flags")]
     public bool IsRaining;
     public bool IsClear;
+    public bool IsOffline; 
 
 
     [Header("Raw Forecast Reference")]
@@ -22,10 +23,11 @@ public class WeatherData : ScriptableObject
 
     public event Action OnWeatherChanged;
 
-    public void Populate(OpenMeteoResponse response)
+    public void Populate(OpenMeteoResponse response, bool isOffline = false)
     {
         if (response == null) return;
         RawResponse = response;
+        IsOffline = isOffline;
 
         if (response.current != null)
         {

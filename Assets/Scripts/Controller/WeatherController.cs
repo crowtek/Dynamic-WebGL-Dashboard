@@ -62,9 +62,11 @@ public class WeatherController : MonoBehaviour
             return;
         }
 
+        bool isOffline = Application.internetReachability == NetworkReachability.NotReachable; // Offline check
+
         if (_weatherData != null)
         {
-            _weatherData.Populate(weather);
+            _weatherData.Populate(weather, isOffline);
         }
     }
 
